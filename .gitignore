@@ -1,0 +1,23 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+*.coverage
+dist/
+build/
+
+# --- Env ---
+.env
+
+# --- Docker ---
+*.log
+*.pid
+*.sock
+*.pid.*
+docker-compose.override.yml
+
+# --- IDEs ---
+.vscode/
+.idea/
