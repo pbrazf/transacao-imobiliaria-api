@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings # BaseSettings é quem sabe ler variáveis do ambiente (incluindo .env).
 
+
 class Config(BaseSettings):
     # São os atributos obrigatórios da classe.
     API_PREFIX: str

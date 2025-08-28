@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Depends
 from core.config import settings
 
+
 # Instância FastAPI
 app = FastAPI()
 
