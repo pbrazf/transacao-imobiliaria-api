@@ -1,5 +1,6 @@
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+
 from core.config import settings
 
 
@@ -22,7 +23,7 @@ SessionLocal = sessionmaker(
 )
 
 # Dependency/auxiliar para obter e fechar sessão (útil nas rotas, serviços, etc.)
-def get_db():
+def gera_sessao():
     db = SessionLocal()
     try:
         yield db

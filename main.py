@@ -3,9 +3,17 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Depends
 from core.config import settings
 
+from api.routers.transacao import router as transacoes_router
+from api.routers.parte import router as partes_router
+from api.routers.comissao import router as comissoes_router
 
 # Instância FastAPI
-app = FastAPI()
+app = FastAPI(title='API Imobiliária', version='1.0.0')
+
+# Rotas 
+app.include_router(transacoes_router)
+app.include_router(partes_router)
+app.include_router(comissoes_router)
 
 # Health oficial sob o prefixo configurável
 @app.get(f'{settings.API_PREFIX}/health')

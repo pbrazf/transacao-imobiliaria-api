@@ -9,7 +9,7 @@ from core.config import settings
 # Sua Base (que contém o metadata)
 from infra.database import Base
 # IMPORTANTE: carregar os models para registrar no Base.metadata
-import infra.models 
+from infra.models import *   
 
 # -----------------------------------------------------------------
 

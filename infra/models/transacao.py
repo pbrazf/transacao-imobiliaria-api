@@ -1,29 +1,22 @@
-import uuid
-from enum import Enum as PyEnum
+from uuid import UUID as PyUUID, uuid4
 from decimal import Decimal
+from datetime import datetime
 
 from sqlalchemy import String, Numeric, DateTime, Enum, func, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infra.database import Base
-
-# Enum de Status da Transação
-class StatusTransacao(PyEnum):
-    CRIADA = 'CRIADA'
-    EM_ANALISE = 'EM_ANALISE'
-    APROVADA = 'APROVADA'
-    FINALIZADA = 'FINALIZADA'
-    CANCELADA = 'CANCELADA'
+from api.helpers.enums import StatusTransacao
 
 # Modelo da Transação
 class Transacao(Base):
     __tablename__ = 'transacao'
 
-    id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[PyUUID] = mapped_column(
 		UUID(as_uuid=True),
 		primary_key=True,
-		default=uuid.uuid4
+		default=uuid4
     )
 
     imovel_codigo: Mapped[str] = mapped_column(
@@ -42,13 +35,13 @@ class Transacao(Base):
 		default=StatusTransacao.CRIADA,
     )
 
-    data_criacao: Mapped[DateTime] = mapped_column(
+    data_criacao: Mapped[datetime] = mapped_column(
 		DateTime(timezone=True),
 		server_default=func.now(), 
         nullable=False
     )
     
-    data_atualizacao: Mapped[DateTime] = mapped_column(
+    data_atualizacao: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 
         server_default=func.now(), 
         onupdate=func.now(), 

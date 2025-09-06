@@ -1,7 +1,7 @@
-import uuid
+from uuid import UUID as PyUUID, uuid4
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Numeric, ForeignKey
+from sqlalchemy import Boolean, Numeric, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,13 +11,13 @@ from infra.database import Base
 class Comissao(Base):
     __tablename__ = 'comissao'
 
-    id: Mapped[uuid.UUID] = mapped_column(
+    id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
-        default=uuid.uuid4
+        default=uuid4
     )
 
-    transacao_id: Mapped[uuid.UUID] = mapped_column(
+    transacao_id: Mapped[PyUUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey('transacao.id', ondelete='CASCADE'),
         nullable=False
@@ -37,8 +37,8 @@ class Comissao(Base):
     paga: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
-        nullable=False
+        nullable=False,
+        server_default=text('false')
     )
 
-    # relacionamento ORM (opcional)
     transacao = relationship('Transacao', backref='comissoes', passive_deletes=True)

@@ -1,36 +1,30 @@
-import uuid
-from enum import Enum as PyEnum
+from uuid import UUID as PyUUID, uuid4
 
 from sqlalchemy import String, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infra.database import Base
-
-# Enum de Tipo Parte
-class TipoEnum(PyEnum):
-	COMPRADOR = 'COMPRADOR'
-	VENDEDOR = 'VENDEDOR'
-	CORRETOR = 'CORRETOR'
+from api.helpers.enums import TipoParte
 
 # Modelo da Parte
 class Parte(Base):
 	__tablename__ = 'parte'
 
-	id: Mapped[uuid.UUID] = mapped_column(
+	id: Mapped[PyUUID] = mapped_column(
 		UUID(as_uuid=True),
 		primary_key=True,
-		default=uuid.uuid4
+		default=uuid4
 	)
 
-	transacao_id: Mapped[uuid.UUID] = mapped_column(
+	transacao_id: Mapped[PyUUID] = mapped_column(
 		UUID(as_uuid=True),
 		ForeignKey('transacao.id', ondelete='CASCADE'),
 		nullable=False
 	)
 
-	tipo: Mapped[TipoEnum] = mapped_column(
-		Enum(TipoEnum, name='tipo_parte'),
+	tipo: Mapped[TipoParte] = mapped_column(
+		Enum(TipoParte, name='tipo_parte'),
 		nullable=False
 	)
 
@@ -50,5 +44,4 @@ class Parte(Base):
 		nullable=True
 	)
 
-	# Faz a relação com a transação
 	transacao = relationship('Transacao', backref='partes', passive_deletes=True)
