@@ -1,56 +1,81 @@
+from uuid import UUID
+from datetime import datetime
 from decimal import Decimal
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from uuid import UUID
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
+from helpers.erros_db import ErroConflitoBD, ErroOperacaoBD
 from infra.models.transacao import Transacao as TransacaoORM
-from infra.models.parte import Parte as ParteORM  # Para validação de STATUS
+from infra.models.parte import Parte as ParteORM
+from helpers.enums import StatusTransacao, TipoParte
 
-from api.helpers.enums import StatusTransacao, TipoParte
 
 class TransacaoRepositorio:
     def __init__(self, db: Session):
         self.db = db
-        
+
     def adicionar(self, obj: TransacaoORM) -> TransacaoORM:
         try:
             self.db.add(obj)
             self.db.commit()
             self.db.refresh(obj)
-        except Exception:
+            return obj
+        except IntegrityError as e:
             self.db.rollback()
-            raise
-        return obj
+            raise ErroConflitoBD() from e
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise ErroOperacaoBD() from e
 
-    def buscar(self, transacao_id: str) -> TransacaoORM | None:
+    def buscar(self, transacao_id: UUID) -> Optional[TransacaoORM]:
         return self.db.get(TransacaoORM, transacao_id)
 
-    def listar(self, *, status_filtro, imovel_codigo, data_ini, data_fim, limit, offset):
-        stmt = select(TransacaoORM)
+    def listar(
+        self,
+        *, # Parâmetros nomeados obrigatórios, não da pra passar por posição
+        status_filtro: Optional[StatusTransacao],
+        imovel_codigo: Optional[str],
+        data_ini: Optional[datetime],
+        data_fim: Optional[datetime],
+        limit: int,
+        offset: int,
+    ) -> tuple[list[TransacaoORM], int]:
+        
+        query = select(TransacaoORM)
         if status_filtro is not None:
-            stmt = stmt.where(TransacaoORM.status == status_filtro)
+            query = query.where(TransacaoORM.status == status_filtro)
         if imovel_codigo:
-            stmt = stmt.where(TransacaoORM.imovel_codigo == imovel_codigo)
+            query = query.where(TransacaoORM.imovel_codigo == imovel_codigo)
         if data_ini:
-            stmt = stmt.where(TransacaoORM.data_criacao >= data_ini)
+            query = query.where(TransacaoORM.data_criacao >= data_ini)
         if data_fim:
-            stmt = stmt.where(TransacaoORM.data_criacao < data_fim)
+            query = query.where(TransacaoORM.data_criacao < data_fim)
 
         try:
             total = self.db.execute(
-                select(func.count()).select_from(stmt.subquery())
+                select(func.count()).select_from(query.subquery())
             ).scalar_one()
 
-            stmt = stmt.order_by(TransacaoORM.data_criacao.desc()).offset(offset).limit(limit)
-            itens = self.db.execute(stmt).scalars().all()
-            return itens, total
-        except Exception:
+            query = (
+                query.order_by(TransacaoORM.data_criacao.desc())
+                .offset(offset)
+                .limit(limit)
+            )
+            itens = self.db.execute(query).scalars().all()
+            return itens, int(total)
+        except SQLAlchemyError as e:
             self.db.rollback()
-            raise
+            raise ErroOperacaoBD() from e
 
     def atualizar_tudo(
-        self, obj: TransacaoORM, *, imovel_codigo: Optional[str] = None, valor_venda: Optional[Decimal] = None
+        self,
+        obj: TransacaoORM,
+        *,
+        imovel_codigo: Optional[str] = None,
+        valor_venda: Optional[Decimal] = None,
     ) -> TransacaoORM:
         if imovel_codigo is not None:
             obj.imovel_codigo = imovel_codigo
@@ -59,38 +84,47 @@ class TransacaoRepositorio:
         try:
             self.db.commit()
             self.db.refresh(obj)
-        except Exception:
+            return obj
+        except IntegrityError as e:
             self.db.rollback()
-            raise
-        return obj
-    
+            raise ErroConflitoBD() from e
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise ErroOperacaoBD() from e
+
     def deletar(self, obj: TransacaoORM) -> None:
         try:
             self.db.delete(obj)
             self.db.commit()
-        except Exception:
+        except IntegrityError as e:
             self.db.rollback()
-            raise
-        
+            raise ErroConflitoBD() from e
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise ErroOperacaoBD() from e
+
     def atualizar_status(self, obj: TransacaoORM, novo_status: StatusTransacao) -> TransacaoORM:
         obj.status = novo_status
         try:
             self.db.commit()
             self.db.refresh(obj)
-        except Exception:
+            return obj
+        except IntegrityError as e:
             self.db.rollback()
-            raise
-        return obj
+            raise ErroConflitoBD() from e
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise ErroOperacaoBD() from e
 
     def listar_partes(self, transacao_id: UUID) -> List[ParteORM]:
         stmt = select(ParteORM).where(ParteORM.transacao_id == transacao_id)
-        return self.db.execute(stmt).scalars().all()
+        try:
+            return self.db.execute(stmt).scalars().all()
+        except SQLAlchemyError as e:
+            self.db.rollback()
+            raise ErroOperacaoBD() from e
 
     def contar_partes_por_tipo(self, transacao_id: UUID) -> Dict[TipoParte, int]:
-        """
-        Retorna um dicionário {TipoParte: quantidade} para as Partes da transação.
-        Garante que a chave seja o Enum TipoParte (mesmo que a coluna esteja como string no banco).
-        """
         stmt = (
             select(ParteORM.tipo, func.count(ParteORM.id))
             .where(ParteORM.transacao_id == transacao_id)
@@ -98,8 +132,11 @@ class TransacaoRepositorio:
         )
         try:
             linhas = self.db.execute(stmt).all()
-        except Exception:
+            resultado: Dict[TipoParte, int] = {}
+            for tipo_val, qtd in linhas:
+                tipo_enum = tipo_val if isinstance(tipo_val, TipoParte) else TipoParte(tipo_val)
+                resultado[tipo_enum] = int(qtd)
+            return resultado
+        except SQLAlchemyError as e:
             self.db.rollback()
-            raise
-
-        return {tipo: qtd for tipo, qtd in linhas}
+            raise ErroOperacaoBD() from e

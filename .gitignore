@@ -1,23 +1,53 @@
 # --- Python ---
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
-*.pytest_cache/
-*.coverage
+*.so
+*.egg-info/
+.eggs/
+.dist-info/
+.build/
 dist/
 build/
+.cache/
+.mypy_cache/
+.ruff_cache/
+.pytype/
 
-# --- Env ---
+# --- Testes/Cobertura ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Ambientes virtuais ---
+venv/
+.venv/
+env/
+.python-version  # pyenv
+
+# --- Config/Segredos ---
 .env
+.env.*
+!.env.example
 
 # --- Docker ---
 *.log
 *.pid
 *.sock
-*.pid.*
 docker-compose.override.yml
+# Se usar volume local do Postgres:
+pgdata/
+docker-data/
 
-# --- IDEs ---
+# --- IDEs/OS ---
 .vscode/
 .idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# --- Artefatos temporários ---
+tmp/
+*.tmp

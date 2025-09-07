@@ -3,19 +3,39 @@ services:
     image: postgres:16-alpine
     container_name: pipeimob-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-pipeimob}
+      POSTGRES_USER: ${POSTGRES_USER:-pipeimob}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-senha_forte}
     ports:
       - '5432:5432'
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
-      interval: 10s
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-pipeimob} -d ${POSTGRES_DB:-pipeimob}']
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 15
     restart: unless-stopped
+
+  api:
+    build: .
+    container_name: pipeimob-api
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '8000:8000'
+    volumes:
+      - ./:/app
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PYTHONPATH: /app
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+      "
 
 volumes:
   db_data:

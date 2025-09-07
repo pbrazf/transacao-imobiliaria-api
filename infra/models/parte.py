@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from infra.database import Base
-from api.helpers.enums import TipoParte
+from helpers.enums import TipoParte
 
 # Modelo da Parte
 class Parte(Base):

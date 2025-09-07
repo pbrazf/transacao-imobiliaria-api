@@ -4,11 +4,8 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# Lê DATABASE_URL do .env via pydantic-settings
 from core.config import settings
-# Sua Base (que contém o metadata)
 from infra.database import Base
-# IMPORTANTE: carregar os models para registrar no Base.metadata
 from infra.models import *   
 
 # -----------------------------------------------------------------

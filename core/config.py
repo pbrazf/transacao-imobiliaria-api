@@ -1,13 +1,13 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict # BaseSettings é quem sabe ler variáveis do ambiente (incluindo .env).
-
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Config(BaseSettings):
-    # São os atributos obrigatórios da classe.
+    # Atributos obrigatórios da classe.
     API_PREFIX: str
-    AUTH_BEARER_TOKEN: str
     DATABASE_URL: str
+    JWT_SEGREDO: str
+    JWT_ALGORITMO: str
+    JWT_MINUTOS: int
 
-    # Pydantic v2: configurações do Settings
     model_config = SettingsConfigDict(
         env_file='.env',
         extra='ignore',   # ignora variáveis que não pertencem ao modelo

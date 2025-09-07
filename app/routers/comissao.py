@@ -1,30 +1,33 @@
-# api/routers/comissao.py
 from uuid import UUID
 from fastapi import APIRouter, Depends, status, Response
-from sqlalchemy.orm import Session
 
-from infra.database import gera_sessao
 from infra.models.comissao import Comissao as ComissaoORM
 from infra.repositories.comissao import ComissaoRepositorio
 from infra.repositories.transacao import TransacaoRepositorio
+from helpers.erros_db import ErroConflitoBD, ErroOperacaoBD
 
-from api.schemas.comissao import ComissaoCriarEntrada, ComissaoSaida
-from api.helpers.http_errors import nao_encontrada, erro_interno
-from api.helpers.comissao import calcular_comissao
+from app.security.security_jwt import validar_jwt
+from app.schemas.comissao import ComissaoCriarEntrada, ComissaoSaida
+from helpers.comissao import calcular_comissao
+from helpers.erros_http import nao_encontrada, erro_interno, conflito
+from helpers.db_session import get_repo_trans, get_repo_comissao
 
-router = APIRouter(prefix='/api/v1', tags=['Comissões'])
+prefix = '/api/v1'
+router = APIRouter(
+    prefix=prefix, 
+    tags=['Comissões'], 
+    dependencies=[Depends(validar_jwt)]
+)
 
-# POST /api/v1/transacoes/{id}/comissoes
+# 1. Criar comissão para uma transação
 @router.post('/transacoes/{transacao_id}/comissoes', response_model=ComissaoSaida, status_code=status.HTTP_201_CREATED)
 def criar_comissao(
     transacao_id: UUID,
     payload: ComissaoCriarEntrada,
     response: Response,
-    db: Session = Depends(gera_sessao),
+	repo_trans: TransacaoRepositorio = Depends(get_repo_trans),
+    repo_com: ComissaoRepositorio = Depends(get_repo_comissao),
 ):
-    repo_trans = TransacaoRepositorio(db)
-    repo_com = ComissaoRepositorio(db)
-
     transacao = repo_trans.buscar(transacao_id)
     if not transacao:
         raise nao_encontrada('transacao')
@@ -39,19 +42,20 @@ def criar_comissao(
     )
     try:
         salvo = repo_com.adicionar(obj)
-    except Exception:
+    except ErroConflitoBD:
+        raise conflito('comissão já cadastrada ou viola restrição')
+    except ErroOperacaoBD:
         raise erro_interno('criar comissão')
 
-    response.headers['Location'] = f'/api/v1/comissoes/{salvo.id}'
+    response.headers['Location'] = f'{prefix}/comissoes/{salvo.id}'
     return salvo
 
-# POST /api/v1/comissoes/{id}/pagar
+# 2. Pagar comissão
 @router.post('/comissoes/{comissao_id}/pagar', response_model=ComissaoSaida, status_code=status.HTTP_200_OK)
 def pagar_comissao(
     comissao_id: UUID,
-    db: Session = Depends(gera_sessao),
+    repo: ComissaoRepositorio = Depends(get_repo_comissao)
 ):
-    repo = ComissaoRepositorio(db)
     obj = repo.buscar(comissao_id)
     if not obj:
         raise nao_encontrada('comissao')
@@ -59,5 +63,7 @@ def pagar_comissao(
         return obj
     try:
         return repo.marcar_paga(obj)
-    except Exception:
+    except ErroConflitoBD:
+        raise conflito('pagamento viola restrição')
+    except ErroOperacaoBD:
         raise erro_interno('pagar comissão')

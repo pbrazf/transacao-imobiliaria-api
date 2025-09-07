@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from infra.database import Base
-from api.helpers.enums import StatusTransacao
+from helpers.enums import StatusTransacao
 
 # Modelo da Transação
 class Transacao(Base):
